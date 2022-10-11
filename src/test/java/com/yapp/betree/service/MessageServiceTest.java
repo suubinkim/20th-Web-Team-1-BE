@@ -4,6 +4,7 @@ import com.yapp.betree.domain.FruitType;
 import com.yapp.betree.domain.Message;
 import com.yapp.betree.dto.SendUserDto;
 import com.yapp.betree.dto.request.MessageRequestDto;
+import com.yapp.betree.dto.request.OpeningRequestDto;
 import com.yapp.betree.dto.response.MessagePageResponseDto;
 import com.yapp.betree.exception.BetreeException;
 import com.yapp.betree.exception.ErrorCode;
@@ -98,8 +99,11 @@ public class MessageServiceTest {
     void fruitCountError() {
 
         List<Long> messageIds = Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
+        Long treeId = 0L;
 
-        assertThatThrownBy(() -> messageService.updateMessageOpening(TEST_SAVE_USER.getId(), messageIds))
+        OpeningRequestDto dto = OpeningRequestDto.builder().messageIds(messageIds).treeId(treeId).build();
+
+        assertThatThrownBy(() -> messageService.updateMessageOpening(TEST_SAVE_USER.getId(), dto))
                 .isInstanceOf(BetreeException.class)
                 .hasMessageContaining("Invalid input value")
                 .extracting("code").isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
@@ -177,7 +181,7 @@ public class MessageServiceTest {
 
         given(messageRepository.findByIdAndUserIdAndDelByReceiver(10L, TEST_SAVE_USER.getId(), false)).willThrow(new BetreeException(ErrorCode.MESSAGE_NOT_FOUND));
 
-        assertThatThrownBy(() -> messageService.getMessageDetail(TEST_SAVE_USER.getId(), 10L))
+        assertThatThrownBy(() -> messageService.getMessageDetail(TEST_SAVE_USER.getId(), 10L, false))
                 .isInstanceOf(BetreeException.class)
                 .hasMessageContaining("메세지가 존재하지 않습니다.")
                 .extracting("code").isEqualTo(ErrorCode.MESSAGE_NOT_FOUND);

@@ -3,6 +3,7 @@ package com.yapp.betree.controller;
 import com.yapp.betree.annotation.LoginUser;
 import com.yapp.betree.dto.LoginUserDto;
 import com.yapp.betree.dto.request.MessageRequestDto;
+import com.yapp.betree.dto.request.OpeningRequestDto;
 import com.yapp.betree.dto.response.MessageDetailResponseDto;
 import com.yapp.betree.dto.response.MessagePageResponseDto;
 import com.yapp.betree.service.MessageService;
@@ -83,7 +84,7 @@ public class MessageController {
      * 메세지 공개 여부 설정 (열매 맺기)
      *
      * @param loginUser
-     * @param messageIds 선택한 메세지 ID List
+     * @param requestDto 열매 맺기 요청 DTO
      */
     @ApiOperation(value = "열매 맺기", notes = "메세지 공개 여부 설정")
     @ApiResponses({
@@ -92,11 +93,11 @@ public class MessageController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/api/messages/opening")
     public ResponseEntity<Void> openingMessage(@ApiIgnore @LoginUser LoginUserDto loginUser,
-                                               @RequestBody List<Long> messageIds) {
+                                               @RequestBody @Valid OpeningRequestDto requestDto) {
 
-        log.info("[messageIds] : {}", messageIds);
+        log.info("[messageIds] : {}", requestDto.getMessageIds());
 
-        messageService.updateMessageOpening(loginUser.getId(), messageIds);
+        messageService.updateMessageOpening(loginUser.getId(), requestDto);
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -230,6 +231,26 @@ public class MessageController {
 
         log.info("[메세지 상세 조회] userId: {}, messageId: {}", loginUser.getId(), messageId);
 
-        return ResponseEntity.ok(messageService.getMessageDetail(loginUser.getId(), messageId));
+        return ResponseEntity.ok(messageService.getMessageDetail(loginUser.getId(), messageId, false));
+    }
+
+    /**
+     * 즐겨찾기한 메세지 상세 조회
+     *
+     * @param loginUser
+     * @return
+     */
+    @ApiOperation(value = "즐겨찾기 메세지 상세 조회", notes = "즐겨찾기한 메세지 상세 조회")
+    @ApiResponses({
+            @ApiResponse(code = 404, message = "[M001]메세지가 존재하지 않습니다.\n" +
+                    "[U005]회원을 찾을 수 없습니다. (보낸 유저가 존재하지 않음)")
+    })
+    @GetMapping("/api/messages/favorite/{messageId}")
+    public ResponseEntity<MessageDetailResponseDto> getFavoriteMessageDetail(@ApiIgnore @LoginUser LoginUserDto loginUser,
+                                                                             @PathVariable Long messageId) {
+
+        log.info("[메세지 상세 조회] userId: {}, messageId: {}", loginUser.getId(), messageId);
+
+        return ResponseEntity.ok(messageService.getMessageDetail(loginUser.getId(), messageId, true));
     }
 }

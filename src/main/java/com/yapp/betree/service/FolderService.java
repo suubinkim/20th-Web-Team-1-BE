@@ -7,6 +7,7 @@ import com.yapp.betree.domain.Message;
 import com.yapp.betree.domain.User;
 import com.yapp.betree.dto.SendUserDto;
 import com.yapp.betree.dto.request.TreeRequestDto;
+import com.yapp.betree.dto.response.ForestResponseDto;
 import com.yapp.betree.dto.response.MessageResponseDto;
 import com.yapp.betree.dto.response.TreeFullResponseDto;
 import com.yapp.betree.dto.response.TreeResponseDto;
@@ -39,24 +40,32 @@ public class FolderService {
      * 유저 나무숲 조회
      *
      * @param userId
-     * @return List<TreeResponseDto>
+     * @return ForestResponseDto
      */
-    public List<TreeResponseDto> userForest(Long longinUserId, Long userId) {
+    public ForestResponseDto userForest(Long longinUserId, Long userId) {
+
+        User user = userService.findById(userId).orElseThrow(() -> new BetreeException(ErrorCode.USER_NOT_FOUND, "userId = " + userId));
+
+        List<TreeResponseDto> dtoList;
 
         //로그인유저 == userId라면 전체 다 보여주기, 기본나무는 제외
         if (longinUserId.equals(userId)) {
-            return folderRepository.findAllByUserId(userId)
+            dtoList = folderRepository.findAllByUserId(userId)
                     .stream()
                     .filter(folder -> !folder.isDefault())
                     .map(TreeResponseDto::of)
                     .collect(Collectors.toList());
+        } else {
+            dtoList = folderRepository.findAllByUserId(userId)
+                    .stream()
+                    .filter(Folder::isOpening)
+                    .map(TreeResponseDto::of)
+                    .collect(Collectors.toList());
         }
-
-        return folderRepository.findAllByUserId(userId)
-                .stream()
-                .filter(Folder::isOpening)
-                .map(TreeResponseDto::of)
-                .collect(Collectors.toList());
+        return ForestResponseDto.builder()
+                .nickname(user.getNickname())
+                .responseDtoList(dtoList)
+                .build();
     }
 
     /**
@@ -79,10 +88,10 @@ public class FolderService {
         }
 
         // 이전, 다음 폴더 없을때 0L으로 처리
-        Long prevId = folderRepository.findTop1ByUserAndIdLessThanOrderByIdDesc(folder.getUser(), treeId)
+        Long prevId = folderRepository.findTop1ByUserAndFruitIsNotAndIdLessThanOrderByIdDesc(folder.getUser(), FruitType.DEFAULT, treeId)
                 .map(Folder::getId)
                 .orElse(0L);
-        Long nextId = folderRepository.findTop1ByUserAndIdGreaterThan(folder.getUser(), treeId)
+        Long nextId = folderRepository.findTop1ByUserAndFruitIsNotAndIdGreaterThan(folder.getUser(), FruitType.DEFAULT, treeId)
                 .map(Folder::getId)
                 .orElse(0L);
 
@@ -118,6 +127,7 @@ public class FolderService {
                 .user(user)
                 .name(treeRequestDto.getName())
                 .level(0L)
+                .opening(true)
                 .build();
 
         return folderRepository.save(folder).getId();
